@@ -92,8 +92,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[f"{DOMAIN}_card_registered"] = True
 
     api_key = entry.data[CONF_API_KEY]
-    latitude = entry.data[CONF_LATITUDE]
-    longitude = entry.data[CONF_LONGITUDE]
+    latitude = entry.options.get(CONF_LATITUDE, entry.data[CONF_LATITUDE])
+    longitude = entry.options.get(CONF_LONGITUDE, entry.data[CONF_LONGITUDE])
 
     minutely_interval = entry.options.get(
         CONF_MINUTELY_INTERVAL, DEFAULT_MINUTELY_INTERVAL

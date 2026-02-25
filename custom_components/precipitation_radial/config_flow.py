@@ -100,10 +100,25 @@ class PrecipitationRadialOptionsFlow(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        current_lat = self._config_entry.options.get(
+            CONF_LATITUDE, self._config_entry.data.get(CONF_LATITUDE)
+        )
+        current_lon = self._config_entry.options.get(
+            CONF_LONGITUDE, self._config_entry.data.get(CONF_LONGITUDE)
+        )
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
+                    vol.Required(
+                        CONF_LATITUDE,
+                        default=current_lat,
+                    ): vol.Coerce(float),
+                    vol.Required(
+                        CONF_LONGITUDE,
+                        default=current_lon,
+                    ): vol.Coerce(float),
                     vol.Required(
                         CONF_MINUTELY_INTERVAL,
                         default=self._config_entry.options.get(

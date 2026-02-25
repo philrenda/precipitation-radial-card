@@ -8,6 +8,11 @@
           "api_key": "API Key",
           "latitude": "Latitude",
           "longitude": "Longitude"
+        },
+        "data_description": {
+          "api_key": "Get a free key at [pirate-weather.apiable.io](https://pirate-weather.apiable.io/).",
+          "latitude": "Decimal degrees, e.g. 40.712 (3 decimal places is sufficient).",
+          "longitude": "Decimal degrees, e.g. -74.006 (negative for West)."
         }
       }
     },
@@ -23,12 +28,16 @@
     "step": {
       "init": {
         "data": {
+          "latitude": "Latitude",
+          "longitude": "Longitude",
           "minutely_interval": "Minutely update interval (seconds)",
           "hourly_interval": "Hourly update interval (seconds)"
         },
         "data_description": {
-          "minutely_interval": "How often to fetch minutely precipitation data (default: 300s). Lower values use more API calls.",
-          "hourly_interval": "How often to fetch hourly forecast data (default: 1200s). Lower values use more API calls."
+          "latitude": "Decimal degrees, e.g. 40.712 (3 decimal places is sufficient).",
+          "longitude": "Decimal degrees, e.g. -74.006 (negative for West).",
+          "minutely_interval": "How often to fetch minutely precipitation data (default: 600s). Lower values use more API calls. Each restart also triggers a fetch.",
+          "hourly_interval": "How often to fetch hourly forecast data (default: 1800s). Lower values use more API calls. Each restart also triggers a fetch."
         }
       }
     }
