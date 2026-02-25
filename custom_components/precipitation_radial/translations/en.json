@@ -10,7 +10,7 @@
           "longitude": "Longitude"
         },
         "data_description": {
-          "api_key": "Get a free key at [pirate-weather.apiable.io](https://pirate-weather.apiable.io/).",
+          "api_key": "Get a free key at pirate-weather.apiable.io.",
           "latitude": "Decimal degrees, e.g. 40.712 (3 decimal places is sufficient).",
           "longitude": "Decimal degrees, e.g. -74.006 (negative for West)."
         }

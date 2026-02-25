@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -21,6 +22,7 @@ from .const import (
 from .coordinator import HourlyCoordinator, MinutelyCoordinator
 
 PLATFORMS = ["sensor"]
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def _register_card(hass: HomeAssistant) -> None:
@@ -78,15 +80,8 @@ async def _register_card(hass: HomeAssistant) -> None:
                 add_extra_js_url(hass, url_with_ver)
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Register the card JS as a static resource."""
-    await _register_card(hass)
-    return True
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Precipitation Radial Card from a config entry."""
-    # Ensure card is registered (in case async_setup didn't run)
     if f"{DOMAIN}_card_registered" not in hass.data:
         await _register_card(hass)
         hass.data[f"{DOMAIN}_card_registered"] = True
