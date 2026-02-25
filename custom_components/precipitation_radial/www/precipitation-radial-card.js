@@ -300,10 +300,21 @@ class PrecipitationRadialCard extends HTMLElement {
     const minutelyData = entityMinutely?.attributes?.data || [];
     const hourlyData = entityHourly?.attributes?.data || [];
 
-    const currentTemp = hass.states[config.entity_current_temperature]?.state || 'N/A';
-    const highTemp = hass.states[config.entity_high_temperature]?.state || 'N/A';
-    const lowTemp = hass.states[config.entity_low_temperature]?.state || 'N/A';
-    const windSpeed = hass.states[config.entity_wind_speed]?.state || 'N/A';
+    const currentTempRaw = hass.states[config.entity_current_temperature]?.state;
+    const currentTemp = currentTempRaw && !['unavailable', 'unknown'].includes(currentTempRaw)
+      ? parseFloat(currentTempRaw).toFixed(1) : 'N/A';
+
+    const highTempRaw = hass.states[config.entity_high_temperature]?.state;
+    const highTemp = highTempRaw && !['unavailable', 'unknown'].includes(highTempRaw)
+      ? Math.round(parseFloat(highTempRaw)).toString() : 'N/A';
+
+    const lowTempRaw = hass.states[config.entity_low_temperature]?.state;
+    const lowTemp = lowTempRaw && !['unavailable', 'unknown'].includes(lowTempRaw)
+      ? Math.round(parseFloat(lowTempRaw)).toString() : 'N/A';
+
+    const windSpeedRaw = hass.states[config.entity_wind_speed]?.state;
+    const windSpeed = windSpeedRaw && !['unavailable', 'unknown'].includes(windSpeedRaw)
+      ? Math.round(parseFloat(windSpeedRaw)).toString() : 'N/A';
 
     const tempUnitRaw = hass.states[config.entity_current_temperature]?.attributes?.unit_of_measurement;
     const tempUnit = typeof tempUnitRaw === 'string' ? tempUnitRaw : '';
