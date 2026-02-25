@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Precipitation Radial Card",
-        "description": "Enter your PirateWeather API key. Get one free at [pirate-weather.apiable.io](https://pirate-weather.apiable.io/).",
+        "description": "Enter your PirateWeather API key and location coordinates.",
         "data": {
           "api_key": "API Key",
           "latitude": "Latitude",
