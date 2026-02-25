@@ -91,9 +91,9 @@ class MinutelyForecastSensor(PrecipitationRadialSensor):
         return {"data": [
             {
                 "time": item.get("time"),
-                "precipIntensity": round(float(item.get("precipIntensity", 0))),
-                "precipProbability": round(float(item.get("precipProbability", 0))),
-                "precipIntensityError": round(float(item.get("precipIntensityError", 0))),
+                "precipIntensity": round(float(item.get("precipIntensity", 0)), 4),
+                "precipProbability": round(float(item.get("precipProbability", 0)), 4),
+                "precipIntensityError": round(float(item.get("precipIntensityError", 0)), 4),
                 "precipType": item.get("precipType", "none"),
             }
             for item in raw
@@ -127,8 +127,8 @@ class HourlyForecastSensor(PrecipitationRadialSensor):
                     "icon": item.get("icon", ""),
                     "summary": item.get("summary", ""),
                     "temperature": round(float(item.get("temperature", 0))),
-                    "precipIntensity": round(float(item.get("precipIntensity", 0))),
-                    "precipProbability": round(float(item.get("precipProbability", 0))),
+                    "precipIntensity": round(float(item.get("precipIntensity", 0)), 4),
+                    "precipProbability": round(float(item.get("precipProbability", 0)), 4),
                 }
                 for item in data
             ]
