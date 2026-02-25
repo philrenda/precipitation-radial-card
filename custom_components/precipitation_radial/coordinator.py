@@ -33,7 +33,7 @@ class MinutelyCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         url = (
             f"{API_ENDPOINT}/{self._api_key}/{self._latitude},{self._longitude}"
-            f"?exclude=hourly,daily,current,alerts,flags&units=si"
+            f"?exclude=hourly,daily,current,alerts,flags&units=us"
         )
         session = async_get_clientsession(self.hass)
         try:
@@ -73,7 +73,7 @@ class HourlyCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         url = (
             f"{API_ENDPOINT}/{self._api_key}/{self._latitude},{self._longitude}"
-            f"?exclude=minutely,daily,alerts,flags&units=si"
+            f"?exclude=minutely,daily,alerts,flags&units=us"
         )
         session = async_get_clientsession(self.hass)
         try:

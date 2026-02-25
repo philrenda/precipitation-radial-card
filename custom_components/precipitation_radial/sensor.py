@@ -136,10 +136,10 @@ class HourlyForecastSensor(PrecipitationRadialSensor):
 
 
 class CurrentApparentTemperatureSensor(PrecipitationRadialSensor):
-    """Current apparent (feels-like) temperature."""
+    """Current actual temperature."""
 
     _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_suggested_display_precision = 1
 
@@ -147,14 +147,14 @@ class CurrentApparentTemperatureSensor(PrecipitationRadialSensor):
         super().__init__(
             coordinator, entry, device_info, "current_apparent_temperature"
         )
-        self._attr_name = "Current Apparent Temperature"
+        self._attr_name = "Current Temperature"
 
     @property
     def native_value(self) -> float | None:
         if not self.coordinator.data:
             return None
         currently = self.coordinator.data.get("currently", {})
-        val = currently.get("apparentTemperature")
+        val = currently.get("temperature")
         return round(float(val), 1) if val is not None else None
 
 
@@ -162,7 +162,7 @@ class TodayHighTemperatureSensor(PrecipitationRadialSensor):
     """Today's high temperature derived from hourly forecast."""
 
     _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_suggested_display_precision = 0
 
@@ -200,7 +200,7 @@ class TodayLowTemperatureSensor(PrecipitationRadialSensor):
     """Today's low temperature derived from hourly forecast."""
 
     _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_suggested_display_precision = 0
 
@@ -238,7 +238,7 @@ class CurrentWindSpeedSensor(PrecipitationRadialSensor):
     """Current wind speed."""
 
     _attr_device_class = SensorDeviceClass.WIND_SPEED
-    _attr_native_unit_of_measurement = UnitOfSpeed.METERS_PER_SECOND
+    _attr_native_unit_of_measurement = UnitOfSpeed.MILES_PER_HOUR
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_suggested_display_precision = 0
 
