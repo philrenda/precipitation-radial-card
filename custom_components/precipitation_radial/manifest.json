@@ -1,0 +1,11 @@
+{
+  "domain": "precipitation_radial",
+  "name": "Precipitation Radial Card",
+  "codeowners": ["@prenda"],
+  "config_flow": true,
+  "documentation": "https://github.com/prenda/precipitation-radial-card",
+  "homeassistant": "2024.7.0",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/prenda/precipitation-radial-card/issues",
+  "version": "1.0.0"
+}

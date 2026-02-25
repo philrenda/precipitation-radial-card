@@ -1,0 +1,7 @@
+{
+  "name": "Precipitation Radial Card",
+  "content_in_root": false,
+  "render_readme": true,
+  "filename": "precipitation-radial-card.js",
+  "homeassistant": "2024.7.0"
+}

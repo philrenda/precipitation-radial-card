@@ -1,0 +1,36 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Precipitation Radial Card",
+        "description": "Enter your PirateWeather API key. Get one free at [pirate-weather.apiable.io](https://pirate-weather.apiable.io/).",
+        "data": {
+          "api_key": "API Key",
+          "latitude": "Latitude",
+          "longitude": "Longitude"
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Invalid API key. Please check your PirateWeather API key.",
+      "cannot_connect": "Unable to connect to the PirateWeather API. Please try again."
+    },
+    "abort": {
+      "already_configured": "This location is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "minutely_interval": "Minutely update interval (seconds)",
+          "hourly_interval": "Hourly update interval (seconds)"
+        },
+        "data_description": {
+          "minutely_interval": "How often to fetch minutely precipitation data (default: 300s). Lower values use more API calls.",
+          "hourly_interval": "How often to fetch hourly forecast data (default: 1200s). Lower values use more API calls."
+        }
+      }
+    }
+  }
+}
