@@ -4,6 +4,8 @@ A custom Home Assistant integration that displays a clock-style radial precipita
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
+![Precipitation Radial Card screenshot](screenshot.png)
+
 The inner ring shows **minutely** precipitation intensity for the next 60 minutes. The outer ring shows **hourly** forecasts for the next 12 hours. The center displays current conditions, temperature, high/low, and wind speed.
 
 ## Features
