@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 
 import homeassistant.helpers.config_validation as cv
@@ -39,6 +40,10 @@ async def _register_card(hass: HomeAssistant) -> None:
 
     url_path = "/local/community/precipitation-radial-card/precipitation-radial-card.js"
 
+    # Generate version hash from file contents for cache busting
+    with open(src, "rb") as f:
+        ver = hashlib.md5(f.read()).hexdigest()[:8]
+
     # Register lovelace resource
     from homeassistant.components.lovelace.resources import ResourceStorageCollection
 
@@ -51,7 +56,6 @@ async def _register_card(hass: HomeAssistant) -> None:
         )
         await resources.async_get_info()
 
-        ver = "1.0.0"
         url_with_ver = f"{url_path}?v={ver}"
 
         # Check if resource already registered

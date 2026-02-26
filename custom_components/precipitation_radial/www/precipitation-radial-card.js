@@ -105,7 +105,7 @@ class PrecipitationRadialCard extends HTMLElement {
     if (this._hass && typeof this._hass.localize === 'function') {
       try {
         localizedString = this._hass.localize(key, replacements);
-        if (localizedString !== key && localizedString !== null && localizedString !== undefined) {
+        if (localizedString && localizedString !== key) {
           processedByHass = true;
         }
       } catch {
