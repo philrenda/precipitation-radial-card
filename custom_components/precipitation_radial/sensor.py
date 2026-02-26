@@ -39,9 +39,11 @@ async def async_setup_entry(
         entry_type=DeviceEntryType.SERVICE,
     )
 
+    location_name = coordinators.get("location_name", "")
+
     async_add_entities(
         [
-            MinutelyForecastSensor(minutely_coord, entry, device_info),
+            MinutelyForecastSensor(minutely_coord, entry, device_info, location_name),
             HourlyForecastSensor(hourly_coord, entry, device_info),
             CurrentApparentTemperatureSensor(hourly_coord, entry, device_info),
             TodayHighTemperatureSensor(hourly_coord, entry, device_info),
@@ -71,10 +73,11 @@ class PrecipitationRadialSensor(CoordinatorEntity, SensorEntity):
 class MinutelyForecastSensor(PrecipitationRadialSensor):
     """Minutely precipitation forecast data."""
 
-    def __init__(self, coordinator, entry, device_info) -> None:
+    def __init__(self, coordinator, entry, device_info, location_name: str = "") -> None:
         super().__init__(coordinator, entry, device_info, "minutely_forecast")
         self._attr_name = "Minutely Forecast"
         self._attr_icon = "mdi:weather-rainy"
+        self._location_name = location_name
 
     @property
     def native_value(self) -> str | None:
@@ -85,19 +88,22 @@ class MinutelyForecastSensor(PrecipitationRadialSensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         if not self.coordinator.data:
-            return {"data": []}
+            return {"data": [], "location_name": self._location_name}
         minutely = self.coordinator.data.get("minutely", {})
         raw = minutely.get("data", [])
-        return {"data": [
-            {
-                "time": item.get("time"),
-                "precipIntensity": round(float(item.get("precipIntensity", 0)), 4),
-                "precipProbability": round(float(item.get("precipProbability", 0)), 4),
-                "precipIntensityError": round(float(item.get("precipIntensityError", 0)), 4),
-                "precipType": item.get("precipType", "none"),
-            }
-            for item in raw
-        ]}
+        return {
+            "location_name": self._location_name,
+            "data": [
+                {
+                    "time": item.get("time"),
+                    "precipIntensity": round(float(item.get("precipIntensity", 0)), 4),
+                    "precipProbability": round(float(item.get("precipProbability", 0)), 4),
+                    "precipIntensityError": round(float(item.get("precipIntensityError", 0)), 4),
+                    "precipType": item.get("precipType", "none"),
+                }
+                for item in raw
+            ],
+        }
 
 
 class HourlyForecastSensor(PrecipitationRadialSensor):

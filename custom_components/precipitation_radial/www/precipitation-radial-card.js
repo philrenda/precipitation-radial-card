@@ -350,6 +350,8 @@ class PrecipitationRadialCard extends HTMLElement {
     const tempUnit = typeof tempUnitRaw === 'string' ? tempUnitRaw : '';
     const windUnit = hass.states[config.entity_wind_speed]?.attributes?.unit_of_measurement || '';
 
+    const locationName = entityMinutely?.attributes?.location_name || '';
+
     const overallIconKey = this._getCurrentOverallIconKey(minutelyData, hourlyData);
     const weatherMdiIcon = this._iconMap[overallIconKey] || this._iconMap['cloudy'];
 
@@ -450,6 +452,16 @@ class PrecipitationRadialCard extends HTMLElement {
       .hour-label {
         font-size: 3.2px;
       }
+      .location-label {
+        position: absolute;
+        top: clamp(2px, 1cqi, 6px);
+        left: clamp(4px, 2cqi, 10px);
+        font-size: clamp(0.5em, 2.5cqi, 0.75em);
+        color: var(--secondary-text-color, #888);
+        line-height: 1.2;
+        z-index: 1;
+        pointer-events: none;
+      }
       .minute-tick {
         stroke: var(--primary-text-color, #000000);
         stroke-width: 0.7px;
@@ -460,6 +472,13 @@ class PrecipitationRadialCard extends HTMLElement {
 
     const cardContainer = document.createElement('div');
     cardContainer.className = 'card-container';
+
+    if (locationName) {
+      const locLabel = document.createElement('div');
+      locLabel.className = 'location-label';
+      locLabel.textContent = locationName;
+      cardContainer.appendChild(locLabel);
+    }
 
     const wrapper = document.createElement('div');
     wrapper.className = 'svg-and-text-wrapper';

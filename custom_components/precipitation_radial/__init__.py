@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 
+import homeassistant.helpers.aiohttp_client
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -84,6 +85,42 @@ async def _register_card(hass: HomeAssistant) -> None:
                 add_extra_js_url(hass, url_with_ver)
 
 
+async def _reverse_geocode(hass: HomeAssistant, latitude: float, longitude: float) -> str:
+    """Reverse geocode lat/lon to a 'City, State/Region' string via Nominatim."""
+    session = homeassistant.helpers.aiohttp_client.async_get_clientsession(hass)
+    url = (
+        f"https://nominatim.openstreetmap.org/reverse"
+        f"?lat={latitude}&lon={longitude}&format=json&zoom=10"
+    )
+    headers = {"User-Agent": "HomeAssistant-PrecipitationRadialCard/1.0"}
+    try:
+        async with session.get(url, headers=headers, timeout=10) as resp:
+            if resp.status != 200:
+                return ""
+            data = await resp.json(content_type=None)
+            addr = data.get("address", {})
+            city = (
+                addr.get("city")
+                or addr.get("town")
+                or addr.get("village")
+                or addr.get("municipality")
+                or addr.get("hamlet")
+                or ""
+            )
+            region = (
+                addr.get("state")
+                or addr.get("province")
+                or addr.get("region")
+                or addr.get("county")
+                or ""
+            )
+            parts = [p for p in (city, region) if p]
+            return ", ".join(parts)
+    except Exception:
+        LOGGER.debug("Reverse geocode failed for %s,%s", latitude, longitude)
+        return ""
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Precipitation Radial Card from a config entry."""
     if f"{DOMAIN}_card_registered" not in hass.data:
@@ -111,10 +148,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await minutely_coord.async_config_entry_first_refresh()
     await hourly_coord.async_config_entry_first_refresh()
 
+    location_name = await _reverse_geocode(hass, latitude, longitude)
+
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "minutely": minutely_coord,
         "hourly": hourly_coord,
+        "location_name": location_name,
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
