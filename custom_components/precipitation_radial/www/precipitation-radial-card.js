@@ -91,11 +91,11 @@ class PrecipitationRadialCard extends HTMLElement {
     this._resolved = allFound;
   }
 
-  _isPrecip(dataPoint, probThreshold = 0.05, intensityThreshold = 0.005) {
+  _isPrecip(dataPoint, probThreshold = 0.10, intensityThreshold = 0.005) {
     if (!dataPoint) return false;
     const intensity = parseFloat(dataPoint.precipIntensity) || 0;
     const probability = parseFloat(dataPoint.precipProbability) || 0;
-    return intensity > intensityThreshold && probability > probThreshold;
+    return intensity >= intensityThreshold && probability >= probThreshold;
   }
 
   _localize(key, fallback, replacements = {}) {
@@ -176,7 +176,10 @@ class PrecipitationRadialCard extends HTMLElement {
           if (isCurrentlyPrecipitating && actualEndsIn === -1) {
             let drySpellFound = true;
             for (let k = 0; k < 5; k++) {
-              if (i + 1 + k >= minutelyData.length || this._isPrecip(minutelyData[i + 1 + k])) {
+              const checkIdx = i + 1 + k;
+              // Past end of data counts as dry (rain ended within the window)
+              if (checkIdx >= minutelyData.length) break;
+              if (this._isPrecip(minutelyData[checkIdx])) {
                 drySpellFound = false;
                 break;
               }
@@ -227,6 +230,33 @@ class PrecipitationRadialCard extends HTMLElement {
         });
       }
       return msg;
+    }
+
+    // Fallback: if any minutely data point would show as colored on the ring,
+    // mention precipitation even if the spell detection didn't find a clean pattern
+    if (minutelyData && minutelyData.length > 0) {
+      let hasAnyPrecip = false;
+      let maxFallbackIntensity = 0;
+      let firstPrecipIdx = -1;
+      let lastPrecipIdx = -1;
+      for (let i = 0; i < minutelyData.length; i++) {
+        if (this._isPrecip(minutelyData[i])) {
+          hasAnyPrecip = true;
+          const inten = parseFloat(minutelyData[i].precipIntensity) || 0;
+          if (inten > maxFallbackIntensity) maxFallbackIntensity = inten;
+          if (firstPrecipIdx === -1) firstPrecipIdx = i;
+          lastPrecipIdx = i;
+        }
+      }
+      if (hasAnyPrecip) {
+        const fallbackDesc = this._getIntensityDescription(maxFallbackIntensity, currentPrecipType);
+        if (firstPrecipIdx === 0) {
+          return `${fallbackDesc} expected`;
+        }
+        return this._localize('ui.card.precipitation_radial.precip_starting_in', `${fallbackDesc} starting in {actual_starts_in} min`, {
+          actual_starts_in: firstPrecipIdx
+        });
+      }
     }
 
     const weatherCondition = hourlyData?.[0]?.summary || this._localize('ui.card.weather.unavailable', 'Weather data unavailable');
@@ -323,7 +353,13 @@ class PrecipitationRadialCard extends HTMLElement {
     const overallIconKey = this._getCurrentOverallIconKey(minutelyData, hourlyData);
     const weatherMdiIcon = this._iconMap[overallIconKey] || this._iconMap['cloudy'];
 
-    const combinedSummary = this._getCombinedWeatherSummary(minutelyData, hourlyData);
+    let combinedSummary;
+    try {
+      combinedSummary = this._getCombinedWeatherSummary(minutelyData, hourlyData);
+    } catch (e) {
+      console.error('Precipitation Radial: error generating summary', e);
+      combinedSummary = hourlyData?.[0]?.summary || 'Weather data unavailable';
+    }
 
     shadowRoot.innerHTML = '';
 
