@@ -91,6 +91,55 @@ The integration makes **2 API calls per update cycle** — one for minutely data
 
 **Formula:** `calls/month = ((86400 / minutely_seconds) + (86400 / hourly_seconds)) x 30`
 
+## How the Card Works
+
+The card uses a clock-style layout with two concentric rings and a center info panel.
+
+### Inner Ring — Next 60 Minutes
+
+The inner ring represents the next 60 minutes of precipitation, one segment per minute, arranged like a clock face. The **top (12 o'clock position) is now**, and time advances clockwise — so the right side is +15 minutes, the bottom is +30 minutes, and the left side is +45 minutes. Tick marks at every 10 minutes help you read the timeline.
+
+This data comes from PirateWeather's **minutely nowcast**, which is based on radar extrapolation. Each segment is colored by precipitation intensity:
+
+| Color | Intensity (in/hr) |
+|-------|-------------------|
+| Gray | None / negligible |
+| Light green | < 0.05 (drizzle) |
+| Green | 0.05 – 0.15 (light rain) |
+| Yellow | 0.15 – 0.30 (moderate) |
+| Orange | 0.30 – 0.60 (heavy) |
+| Red-orange | 0.60 – 1.0 (very heavy) |
+| Red | > 1.0 (extreme) |
+
+### Outer Ring — Next 12 Hours
+
+The outer dots represent the next 12 hours of precipitation forecast, positioned like hours on a clock face. Each dot is placed at its **actual clock hour** — so if it's currently 2 PM, the first dot appears at the 2 o'clock position, the next at 3, and so on around the dial.
+
+This data comes from PirateWeather's **hourly forecast**, using the same color scale as the inner ring.
+
+### Center Text
+
+The center displays a weather icon, a summary line, and current conditions (temperature, high/low, wind). The summary line adapts based on what the minutely data shows:
+
+- **No precipitation:** Shows the current hourly condition (e.g., "Partly Cloudy")
+- **Rain starting soon:** "Light Rain starting in 12 min, for 8 min"
+- **Currently raining:** "Moderate Rain ending in 23 min" or "Heavy Rain ongoing"
+
+### Data Sources & Limitations
+
+All data comes from the [PirateWeather API](https://pirateweather.net/), which is a free alternative to the Dark Sky API.
+
+**Minutely data (inner ring)** is a radar-based nowcast. It's generally reliable for detecting precipitation that's already nearby, but has some limitations:
+
+- **Radar extrapolation can miss new storm formation** — it projects existing precipitation forward but can't predict rain that develops from scratch
+- **Accuracy decreases with time** — the first 15–20 minutes are usually reliable, but the 30–60 minute range is more speculative
+- **Light precipitation may not register** — very light drizzle or mist can fall below radar detection thresholds
+- **Resolution is coarse** — PirateWeather uses a ~13 km grid, so localized showers may be missed or shown for nearby areas
+
+**Hourly data (outer ring)** is a traditional forecast model, which is better at predicting precipitation hours out but less precise about exact timing and intensity.
+
+Both `precipIntensity` (in/hr) and `precipProbability` (0–1) must exceed minimum thresholds for a segment to show color. A segment with high intensity but very low probability (< 10%) will remain gray, and vice versa.
+
 ## Sensors Created
 
 The integration creates a **Precipitation Radial** device with 6 sensors:
