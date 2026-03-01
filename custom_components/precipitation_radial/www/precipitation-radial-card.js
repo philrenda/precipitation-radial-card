@@ -4,6 +4,7 @@ class PrecipitationRadialCard extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this._config = {};
     this._resolved = false;
+    this._lastStateSnapshot = null;
     this._iconMap = {
       'clear-day': 'mdi:weather-sunny',
       'clear-night': 'mdi:weather-night',
@@ -53,7 +54,35 @@ class PrecipitationRadialCard extends HTMLElement {
     if (!this._resolved) {
       this._autoDiscover(hass);
     }
-    this._updateCard(hass);
+    if (this._hasRelevantStateChanged(hass)) {
+      this._updateCard(hass);
+    }
+  }
+
+  _hasRelevantStateChanged(hass) {
+    if (!this._resolved) return true;
+
+    const config = this._config;
+    const entityKeys = [
+      config.entity_minutely,
+      config.entity_hourly,
+      config.entity_current_temperature,
+      config.entity_high_temperature,
+      config.entity_low_temperature,
+      config.entity_wind_speed,
+    ];
+
+    const snapshot = entityKeys.map(eid => {
+      const s = eid ? hass.states[eid] : undefined;
+      if (!s) return null;
+      return s.last_updated;
+    }).join('|');
+
+    if (snapshot === this._lastStateSnapshot) {
+      return false;
+    }
+    this._lastStateSnapshot = snapshot;
+    return true;
   }
 
   get hass() {
@@ -365,13 +394,14 @@ class PrecipitationRadialCard extends HTMLElement {
 
     shadowRoot.innerHTML = '';
 
+    const haCard = document.createElement('ha-card');
+
     const style = document.createElement('style');
     style.textContent = `
       :host {
         display: block;
-        background-color: var(--ha-card-background, var(--card-background-color, white));
-        border-radius: var(--ha-card-border-radius, 12px);
-        box-shadow: var(--ha-card-box-shadow, 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12));
+      }
+      ha-card {
         padding: clamp(8px, 3cqi, 16px);
         box-sizing: border-box;
         font-family: var(--primary-font-family, sans-serif);
@@ -468,7 +498,7 @@ class PrecipitationRadialCard extends HTMLElement {
         stroke-linecap: round;
       }
     `;
-    shadowRoot.appendChild(style);
+    haCard.appendChild(style);
 
     const cardContainer = document.createElement('div');
     cardContainer.className = 'card-container';
@@ -619,7 +649,8 @@ class PrecipitationRadialCard extends HTMLElement {
     `;
     wrapper.appendChild(textContainer);
     cardContainer.appendChild(wrapper);
-    shadowRoot.appendChild(cardContainer);
+    haCard.appendChild(cardContainer);
+    shadowRoot.appendChild(haCard);
   }
 
   getCardSize() {
