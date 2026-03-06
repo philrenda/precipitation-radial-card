@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import glob
 import hashlib
 import os
 
@@ -33,17 +34,25 @@ async def _register_card(hass: HomeAssistant) -> None:
 
     src = os.path.join(os.path.dirname(__file__), "www", "precipitation-radial-card.js")
     dst_dir = os.path.join(hass.config.config_dir, "www", "community", "precipitation-radial-card")
-    dst = os.path.join(dst_dir, "precipitation-radial-card.js")
 
-    # Copy card JS to www/ so it's served via /local/
     os.makedirs(dst_dir, exist_ok=True)
-    shutil.copy2(src, dst)
-
-    url_path = "/local/community/precipitation-radial-card/precipitation-radial-card.js"
 
     # Generate version hash from file contents for cache busting
     with open(src, "rb") as f:
         ver = hashlib.md5(f.read()).hexdigest()[:8]
+
+    # Use hash in filename so all cache layers (including WebView) see a new file
+    dst_filename = f"precipitation-radial-card-{ver}.js"
+    dst = os.path.join(dst_dir, dst_filename)
+
+    # Remove old hashed copies before writing the new one
+    for old in glob.glob(os.path.join(dst_dir, "precipitation-radial-card*.js")):
+        if old != dst:
+            os.remove(old)
+
+    shutil.copy2(src, dst)
+
+    url_with_ver = f"/local/community/precipitation-radial-card/{dst_filename}"
 
     # Register lovelace resource
     from homeassistant.components.lovelace.resources import ResourceStorageCollection
@@ -56,8 +65,6 @@ async def _register_card(hass: HomeAssistant) -> None:
             else lovelace["resources"]
         )
         await resources.async_get_info()
-
-        url_with_ver = f"{url_path}?v={ver}"
 
         # Check if resource already registered
         found = False
