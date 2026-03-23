@@ -2,7 +2,7 @@
 
 A custom Home Assistant integration that displays a clock-style radial precipitation forecast using [PirateWeather](https://pirateweather.net/) data.
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 
 ![Precipitation Radial Card screenshot](screenshot.png)
 
@@ -23,13 +23,12 @@ The inner ring shows **minutely** precipitation intensity for the next 60 minute
 
 ## Installation
 
-### HACS (Custom Repository)
+### HACS (Recommended)
 
 1. Open HACS in Home Assistant
-2. Click the three dots menu (top right) > **Custom repositories**
-3. Add `https://github.com/philrenda/precipitation-radial-card` with category **Integration**
-4. Click **Download**
-5. Restart Home Assistant
+2. Search for **Precipitation Radial Card**
+3. Click **Download**
+4. Restart Home Assistant
 
 ### Manual
 
