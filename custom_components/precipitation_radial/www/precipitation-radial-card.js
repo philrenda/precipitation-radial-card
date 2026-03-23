@@ -244,6 +244,22 @@ class PrecipitationRadialCard extends HTMLElement {
 
     if (isCurrentlyPrecipitating) {
       if (actualEndsIn !== -1 && actualEndsIn > 0) {
+        // If rain extends to end of minutely window, check hourly data for duration
+        if (actualEndsIn >= minutelyData.length - 1 && hourlyData && hourlyData.length > 1) {
+          // Count consecutive hours with precipitation starting from hour 1
+          // (hour 0 overlaps with the minutely window)
+          let rainyHours = 1; // at least 1 hour (the minutely window)
+          for (let h = 1; h < hourlyData.length; h++) {
+            if (this._isPrecip(hourlyData[h])) {
+              rainyHours++;
+            } else {
+              break;
+            }
+          }
+          if (rainyHours >= 2) {
+            return `${intensityDesc} expected for the next ${rainyHours} hours`;
+          }
+        }
         return this._localize('ui.card.precipitation_radial.precip_ending_in', `${intensityDesc} ending in {actual_ends_in} min`, {actual_ends_in: actualEndsIn});
       }
       return this._localize('ui.card.precipitation_radial.precip_ongoing', `${intensityDesc} ongoing`, {});
