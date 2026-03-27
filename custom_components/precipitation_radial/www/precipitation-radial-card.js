@@ -386,6 +386,73 @@ class PrecipitationRadialCard extends HTMLElement {
     return '#E53935';
   }
 
+  _generatePreviewMinutely(segments) {
+    // Generate 60 minutes of fake minutely data from segment definitions.
+    // Each segment: { minutes: N, intensity: 0-1, probability: 0-1, type: "rain"|"snow"|... }
+    // Intensity transitions smoothly between segments.
+    const data = [];
+    let minute = 0;
+    const now = new Date();
+    for (let s = 0; s < segments.length && minute < 60; s++) {
+      const seg = segments[s];
+      const nextSeg = segments[s + 1] || { intensity: 0, probability: 0 };
+      const segMinutes = Math.min(seg.minutes || 10, 60 - minute);
+      for (let m = 0; m < segMinutes && minute < 60; m++) {
+        const t = segMinutes > 1 ? m / (segMinutes - 1) : 0;
+        // Ease into next segment in the last 30% of this segment
+        const easeStart = 0.7;
+        let intensity = seg.intensity || 0;
+        let probability = seg.probability ?? (intensity > 0 ? 0.9 : 0.1);
+        if (t > easeStart) {
+          const blend = (t - easeStart) / (1 - easeStart);
+          intensity = intensity * (1 - blend) + (nextSeg.intensity || 0) * blend;
+          const nextProb = nextSeg.probability ?? (nextSeg.intensity > 0 ? 0.9 : 0.1);
+          probability = probability * (1 - blend) + nextProb * blend;
+        }
+        const time = new Date(now.getTime() + minute * 60000);
+        data.push({
+          time: time.toISOString(),
+          precipIntensity: intensity.toFixed(4),
+          precipProbability: probability.toFixed(2),
+          precipType: seg.type || 'rain',
+        });
+        minute++;
+      }
+    }
+    // Fill remaining minutes with no precip
+    while (data.length < 60) {
+      const time = new Date(now.getTime() + data.length * 60000);
+      data.push({
+        time: time.toISOString(),
+        precipIntensity: '0',
+        precipProbability: '0',
+        precipType: 'none',
+      });
+    }
+    return data;
+  }
+
+  _generatePreviewHourly(hours) {
+    // Generate 12 hours of fake hourly data from simple definitions.
+    // Each entry: { intensity: 0-1, probability: 0-1, type: "rain"|"snow"|..., summary: "..." }
+    // Or just use an array of 12 entries (sparse — missing entries default to no precip).
+    const data = [];
+    const now = new Date();
+    for (let h = 0; h < 12; h++) {
+      const entry = hours[h] || {};
+      const time = new Date(now.getTime() + h * 3600000);
+      data.push({
+        time: time.toISOString(),
+        precipIntensity: entry.intensity ?? 0,
+        precipProbability: entry.probability ?? (entry.intensity > 0 ? 0.8 : 0.05),
+        precipType: entry.type || 'rain',
+        summary: entry.summary || '',
+        icon: entry.icon || 'cloudy',
+      });
+    }
+    return data;
+  }
+
   disconnectedCallback() {
     this._stopAnimation();
   }
@@ -1329,8 +1396,18 @@ class PrecipitationRadialCard extends HTMLElement {
 
     const entityMinutely = hass.states[config.entity_minutely];
     const entityHourly = hass.states[config.entity_hourly];
-    const minutelyData = entityMinutely?.attributes?.data || [];
-    const hourlyData = entityHourly?.attributes?.data || [];
+    let minutelyData = entityMinutely?.attributes?.data || [];
+    let hourlyData = entityHourly?.attributes?.data || [];
+
+    // Preview mode: generate fake minutely data if preview_minutely is set
+    if (config.preview_minutely && Array.isArray(config.preview_minutely)) {
+      minutelyData = this._generatePreviewMinutely(config.preview_minutely);
+    }
+
+    // Preview mode: generate fake hourly data if preview_hourly is set
+    if (config.preview_hourly && Array.isArray(config.preview_hourly)) {
+      hourlyData = this._generatePreviewHourly(config.preview_hourly);
+    }
 
     const currentTempRaw = hass.states[config.entity_current_temperature]?.state;
     const currentTemp = currentTempRaw && !['unavailable', 'unknown'].includes(currentTempRaw)
@@ -1344,7 +1421,9 @@ class PrecipitationRadialCard extends HTMLElement {
     const lowTemp = lowTempRaw && !['unavailable', 'unknown'].includes(lowTempRaw)
       ? Math.round(parseFloat(lowTempRaw)).toString() : 'N/A';
 
-    const windSpeedRaw = hass.states[config.entity_wind_speed]?.state;
+    const windSpeedRaw = config.preview_wind_speed != null
+      ? String(config.preview_wind_speed)
+      : hass.states[config.entity_wind_speed]?.state;
     const windSpeed = windSpeedRaw && !['unavailable', 'unknown'].includes(windSpeedRaw)
       ? Math.round(parseFloat(windSpeedRaw)).toString() : 'N/A';
 
@@ -1358,7 +1437,12 @@ class PrecipitationRadialCard extends HTMLElement {
     let combinedSummary;
     if (config.preview_condition) {
       overallIconKey = config.preview_condition;
-      combinedSummary = `Preview: ${config.preview_condition}`;
+      if (config.preview_summary) {
+        combinedSummary = config.preview_summary;
+      } else {
+        // Format condition name nicely: "partly-cloudy-day" → "Partly Cloudy Day"
+        combinedSummary = config.preview_condition.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      }
     } else {
       overallIconKey = this._getCurrentOverallIconKey(minutelyData, hourlyData);
       try {
@@ -1956,8 +2040,8 @@ class PrecipitationRadialCard extends HTMLElement {
       intensityFactor = Math.min(1, Math.sqrt(Math.min(maxIntensity, 1)));
     }
     const windSpeedNum = parseFloat(windSpeedRaw) || 0;
-    // Wind as independent overlay: 0-5 mph = none, 5-33 mph = scales 0→1, 33+ capped
-    const windFactor = windSpeedNum <= 5 ? 0 : Math.min(1, (windSpeedNum - 5) / 28);
+    // Wind as independent overlay: 0-10 mph = none, 10-33 mph = scales 0→1, 33+ capped
+    const windFactor = windSpeedNum <= 10 ? 0 : Math.min(1, (windSpeedNum - 10) / 23);
 
     const skyAnim = this._mapConditionForAnimation(sky);
     const precipAnim = precip ? this._mapConditionForAnimation(precip) : null;
