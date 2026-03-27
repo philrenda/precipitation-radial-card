@@ -3,6 +3,7 @@
 A custom Home Assistant integration that displays a clock-style radial precipitation forecast using [PirateWeather](https://pirateweather.net/) data.
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=philrenda&repository=precipitation-radial-card&category=integration)
 
 <p align="center">
   <img src="demo-dark.gif" width="350" alt="Dark mode demo">
