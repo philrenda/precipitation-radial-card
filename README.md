@@ -15,6 +15,12 @@ The inner ring shows **minutely** precipitation intensity for the next 60 minute
 - Hourly precipitation ring (next 12 hours)
 - Current conditions with feels-like temperature, high/low, and wind speed
 - Smart precipitation summaries ("Light Rain starting in 12 min, for 8 min")
+- **Animated weather backgrounds** — rain, snow, sleet, hail, thunderstorm, fog, clouds, and wind visualized with canvas-based particle animations that scale with intensity
+- **Stacked animation layers** — sky conditions (clouds, fog) and precipitation (rain, snow) render simultaneously for realistic combinations like sun showers
+- **Pure CSS weather icons** — animated icons for all 12 weather conditions replace static MDI icons in the card center
+- **Wind visualization** — SVG snake-line wind animation that scales with wind speed (5–33+ mph)
+- **Theme-aware colors** — automatically adapts to your HA light/dark theme using CSS variables
+- **Locate-me button** — tap to recenter the forecast on your current device location (uses HA device trackers with browser geolocation fallback)
 - Auto-discovers entities — zero card configuration needed
 - Configurable polling intervals (minutely and hourly, independently)
 - Configurable location (latitude/longitude) — changeable anytime without reinstalling

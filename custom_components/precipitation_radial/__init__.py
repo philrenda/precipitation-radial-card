@@ -6,10 +6,12 @@ import glob
 import hashlib
 import os
 
+import voluptuous as vol
+
 import homeassistant.helpers.aiohttp_client
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 
 from .const import (
     CONF_API_KEY,
@@ -26,6 +28,14 @@ from .coordinator import HourlyCoordinator, MinutelyCoordinator
 
 PLATFORMS = ["sensor"]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+SERVICE_UPDATE_LOCATION = "update_location"
+SERVICE_UPDATE_LOCATION_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_LATITUDE): vol.Coerce(float),
+        vol.Required(CONF_LONGITUDE): vol.Coerce(float),
+    }
+)
 
 
 async def _register_card(hass: HomeAssistant) -> None:
@@ -167,6 +177,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+
+    # Register update_location service (only once across all entries)
+    if not hass.services.has_service(DOMAIN, SERVICE_UPDATE_LOCATION):
+
+        async def handle_update_location(call: ServiceCall) -> None:
+            """Update lat/lon in the first config entry's options and reload."""
+            new_lat = call.data[CONF_LATITUDE]
+            new_lon = call.data[CONF_LONGITUDE]
+            entries = hass.config_entries.async_entries(DOMAIN)
+            if not entries:
+                LOGGER.warning("No config entries found for %s", DOMAIN)
+                return
+            target_entry = entries[0]
+            new_options = dict(target_entry.options)
+            new_options[CONF_LATITUDE] = new_lat
+            new_options[CONF_LONGITUDE] = new_lon
+            hass.config_entries.async_update_entry(
+                target_entry, options=new_options
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_UPDATE_LOCATION,
+            handle_update_location,
+            schema=SERVICE_UPDATE_LOCATION_SCHEMA,
+        )
 
     return True
 
