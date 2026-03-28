@@ -3,12 +3,7 @@
     "step": {
       "user": {
         "title": "Precipitation Radial Card",
-        "description": "A [PirateWeather]({pirate_weather_url}) API key is required. Register for free at [{register_domain}]({register_url}).",
-        "description_placeholders": {
-          "pirate_weather_url": "https://pirateweather.net/",
-          "register_domain": "pirate-weather.apiable.io",
-          "register_url": "https://pirate-weather.apiable.io/"
-        },
+        "description": "A PirateWeather API key is required. Register for a free key at pirate-weather.apiable.io.",
         "data": {
           "api_key": "API Key",
           "latitude": "Latitude",
