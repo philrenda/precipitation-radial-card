@@ -73,7 +73,7 @@ class HourlyCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         url = (
             f"{API_ENDPOINT}/{self._api_key}/{self._latitude},{self._longitude}"
-            f"?exclude=minutely,daily,alerts,flags&units=us"
+            f"?exclude=minutely,alerts,flags&units=us"
         )
         session = async_get_clientsession(self.hass)
         try:
@@ -89,4 +89,5 @@ class HourlyCoordinator(DataUpdateCoordinator):
         return {
             "currently": data.get("currently", {}),
             "hourly": data.get("hourly", {}),
+            "daily": data.get("daily", {}),
         }

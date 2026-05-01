@@ -165,7 +165,7 @@ class CurrentApparentTemperatureSensor(PrecipitationRadialSensor):
 
 
 class TodayHighTemperatureSensor(PrecipitationRadialSensor):
-    """Today's high temperature derived from hourly forecast."""
+    """Today's high temperature from PirateWeather daily forecast."""
 
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
@@ -182,28 +182,16 @@ class TodayHighTemperatureSensor(PrecipitationRadialSensor):
     def native_value(self) -> float | None:
         if not self.coordinator.data:
             return None
-        hourly = self.coordinator.data.get("hourly", {})
-        data = hourly.get("data", [])
+        daily = self.coordinator.data.get("daily", {})
+        data = daily.get("data", [])
         if not data:
             return None
-
-        now = datetime.now(timezone.utc)
-        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        midnight_ts = midnight.timestamp()
-        end_of_day_ts = midnight_ts + 86400
-
-        temps = [
-            float(item["temperature"])
-            for item in data
-            if "time" in item
-            and "temperature" in item
-            and midnight_ts <= item["time"] < end_of_day_ts
-        ]
-        return round(max(temps)) if temps else None
+        val = data[0].get("temperatureHigh")
+        return round(float(val)) if val is not None else None
 
 
 class TodayLowTemperatureSensor(PrecipitationRadialSensor):
-    """Today's low temperature derived from hourly forecast."""
+    """Today's low temperature from PirateWeather daily forecast."""
 
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
@@ -220,24 +208,12 @@ class TodayLowTemperatureSensor(PrecipitationRadialSensor):
     def native_value(self) -> float | None:
         if not self.coordinator.data:
             return None
-        hourly = self.coordinator.data.get("hourly", {})
-        data = hourly.get("data", [])
+        daily = self.coordinator.data.get("daily", {})
+        data = daily.get("data", [])
         if not data:
             return None
-
-        now = datetime.now(timezone.utc)
-        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        midnight_ts = midnight.timestamp()
-        end_of_day_ts = midnight_ts + 86400
-
-        temps = [
-            float(item["temperature"])
-            for item in data
-            if "time" in item
-            and "temperature" in item
-            and midnight_ts <= item["time"] < end_of_day_ts
-        ]
-        return round(min(temps)) if temps else None
+        val = data[0].get("temperatureLow")
+        return round(float(val)) if val is not None else None
 
 
 class CurrentWindSpeedSensor(PrecipitationRadialSensor):
