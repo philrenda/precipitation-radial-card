@@ -45,22 +45,24 @@ async def _register_card(hass: HomeAssistant) -> None:
     src = os.path.join(os.path.dirname(__file__), "www", "precipitation-radial-card.js")
     dst_dir = os.path.join(hass.config.config_dir, "www", "community", "precipitation-radial-card")
 
-    os.makedirs(dst_dir, exist_ok=True)
+    def _copy_card() -> str:
+        """Synchronous file operations for executor."""
+        os.makedirs(dst_dir, exist_ok=True)
 
-    # Generate version hash from file contents for cache busting
-    with open(src, "rb") as f:
-        ver = hashlib.md5(f.read()).hexdigest()[:8]
+        with open(src, "rb") as f:
+            ver = hashlib.md5(f.read()).hexdigest()[:8]
 
-    # Use hash in filename so all cache layers (including WebView) see a new file
-    dst_filename = f"precipitation-radial-card-{ver}.js"
-    dst = os.path.join(dst_dir, dst_filename)
+        dst_filename = f"precipitation-radial-card-{ver}.js"
+        dst = os.path.join(dst_dir, dst_filename)
 
-    # Remove old hashed copies before writing the new one
-    for old in glob.glob(os.path.join(dst_dir, "precipitation-radial-card*.js")):
-        if old != dst:
-            os.remove(old)
+        for old in glob.glob(os.path.join(dst_dir, "precipitation-radial-card*.js")):
+            if old != dst:
+                os.remove(old)
 
-    shutil.copy2(src, dst)
+        shutil.copy2(src, dst)
+        return dst_filename
+
+    dst_filename = await hass.async_add_executor_job(_copy_card)
 
     url_with_ver = f"/local/community/precipitation-radial-card/{dst_filename}"
 
