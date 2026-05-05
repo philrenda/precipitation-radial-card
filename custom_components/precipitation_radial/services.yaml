@@ -1,7 +1,6 @@
 update_location:
   name: Update location
   description: Update the latitude and longitude for precipitation data.
-  target:
   fields:
     latitude:
       name: Latitude
@@ -11,6 +10,7 @@ update_location:
         number:
           min: -90
           max: 90
+          step: any
           mode: box
     longitude:
       name: Longitude
@@ -20,4 +20,5 @@ update_location:
         number:
           min: -180
           max: 180
+          step: any
           mode: box
