@@ -86,6 +86,23 @@ Go to **Settings** > **Devices & Services** > **Precipitation Radial Card** > **
 
 Changes take effect immediately (the integration reloads automatically).
 
+### Card options (YAML)
+
+The card auto-discovers its sensors, so the minimal config is just `type: custom:precipitation-radial-card`. Optional keys:
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `animation` | `vivid` / `subtle` | `vivid` | `vivid` draws weather particles on a canvas. `subtle` uses pure CSS/DOM animations instead — recommended for Android WebView browsers (e.g. Fully Kiosk wall tablets), where the canvas layer may never be composited (backgrounds look frozen or invisible). CSS animations also keep running when a WebView strands `requestAnimationFrame` after a screensaver. |
+| `tap_action` | `{action: navigate \| url, ...}` | — | Navigate to a dashboard path or open a URL when the card is tapped. |
+
+```yaml
+type: custom:precipitation-radial-card
+animation: subtle
+tap_action:
+  action: navigate
+  navigation_path: /lovelace/weather
+```
+
 ## API Usage & Recommended Intervals
 
 The integration makes **2 API calls per update cycle** — one for minutely data, one for hourly data. Each Home Assistant restart also triggers a fetch for both.

@@ -39,6 +39,18 @@ class PrecipitationRadialCard extends HTMLElement {
       'chance_of_rain': 'wi-rainy',
       'showers': 'wi-rainy',
     };
+    // Full-card tap support (config: tap_action). Interactive elements inside
+    // the card (locate button) call stopPropagation so they are unaffected.
+    this.addEventListener('click', () => {
+      const ta = this._config && this._config.tap_action;
+      if (!ta || !ta.action || ta.action === 'none') return;
+      if (ta.action === 'navigate' && ta.navigation_path) {
+        history.pushState(null, '', ta.navigation_path);
+        window.dispatchEvent(new CustomEvent('location-changed'));
+      } else if (ta.action === 'url' && ta.url_path) {
+        window.open(ta.url_path, ta.new_tab === false ? '_self' : '_blank');
+      }
+    });
   }
 
   static getStubConfig() {
@@ -48,6 +60,8 @@ class PrecipitationRadialCard extends HTMLElement {
   setConfig(config) {
     if (!config) config = {};
     this._config = config;
+    const ta = config.tap_action;
+    this.style.cursor = (ta && ta.action && ta.action !== 'none') ? 'pointer' : '';
     this._resolved = false;
     // If all 6 entities are explicitly provided, mark as resolved immediately
     if (
@@ -462,6 +476,10 @@ class PrecipitationRadialCard extends HTMLElement {
       cancelAnimationFrame(this._rafId);
       this._rafId = null;
     }
+    if (this._animWatchdog) {
+      clearInterval(this._animWatchdog);
+      this._animWatchdog = null;
+    }
     this._animRunning = false;
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
@@ -624,8 +642,21 @@ class PrecipitationRadialCard extends HTMLElement {
     if (gradient === 'none') return;
     const div = document.createElement('div');
     div.className = 'animation-gradient';
+    // Original placement: gradient inside the scene container (z0, under the
+    // z1 canvas / z2 dial) — this is the compositing order that has always
+    // shipped; do not move the scene gradient out of the container.
     div.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;border-radius:inherit;background:${gradient};`;
     container.appendChild(div);
+    // Second copy on ha-card at z:-1 tints the card padding/frame so the
+    // square around the scene matches — kept separate so it can't affect
+    // the container's internal stacking.
+    const card = container.closest('ha-card');
+    if (card) {
+      card.querySelectorAll(':scope > .animation-gradient').forEach((n) => n.remove());
+      const frame = div.cloneNode(false);
+      frame.style.zIndex = '-1';
+      card.insertBefore(frame, card.firstChild);
+    }
   }
 
   _getCSSParticleConfig(conditionKey, intensityFactor = 0) {
@@ -895,6 +926,20 @@ class PrecipitationRadialCard extends HTMLElement {
 
     this._animRunning = true;
     this._rafId = requestAnimationFrame((t) => this._animationTick(t));
+
+    // Stall watchdog: Android WebViews (Fully Kiosk) can strand the rAF queue
+    // after their screensaver, leaving a frozen last frame. If no tick has run
+    // recently while we're supposed to be animating, re-arm the loop.
+    if (this._animWatchdog) clearInterval(this._animWatchdog);
+    this._animWatchdog = setInterval(() => {
+      if (!this._animRunning) return;
+      const last = this._lastFrameTime || 0;
+      if (performance.now() - last > 1500) {
+        if (this._rafId) cancelAnimationFrame(this._rafId);
+        this._lastFrameTime = 0; // avoid a giant dt on the revived frame
+        this._rafId = requestAnimationFrame((t) => this._animationTick(t));
+      }
+    }, 2000);
   }
 
   _addLayerParticles(conditionKey, windSpeed, intensityFactor = 0) {
@@ -1117,9 +1162,25 @@ class PrecipitationRadialCard extends HTMLElement {
 
     // ResizeObserver is async — canvas context may not be ready on the first frame
     if (!this._animCtx || !this._animCanvas || this._canvasW === 0 || this._canvasH === 0) {
+      this._lastFrameTime = timestamp;
       this._rafId = requestAnimationFrame((t) => this._animationTick(t));
       return;
     }
+    try {
+      this._animationTickBody(timestamp);
+    } catch (e) {
+      // one bad frame must not kill the loop
+      try {
+        if (!window.__radialDbgErr && this._hass) {
+          window.__radialDbgErr = 1;
+          this._hass.callService('logbook', 'log', { name: 'RadialDbg', message: 'tick ERROR ' + (e && e.message) });
+        }
+      } catch (e2) {}
+    }
+    this._rafId = requestAnimationFrame((t) => this._animationTick(t));
+  }
+
+  _animationTickBody(timestamp) {
 
     const w = this._canvasW;
     const h = this._canvasH;
@@ -1174,8 +1235,6 @@ class PrecipitationRadialCard extends HTMLElement {
     if (this._hasThunderstorm || this._conditionKey === 'thunderstorm' || this._overlayConditionKey === 'thunderstorm') {
       this._updateLightningFlash(ctx, w, h, timestamp);
     }
-
-    this._rafId = requestAnimationFrame((t) => this._animationTick(t));
   }
 
   _drawParticle(ctx, p, alpha) {
@@ -1474,6 +1533,8 @@ class PrecipitationRadialCard extends HTMLElement {
         box-sizing: border-box;
         font-family: var(--primary-font-family, sans-serif);
         container-type: inline-size;
+        position: relative;
+        overflow: hidden;
       }
       .card-container {
         position: relative;
@@ -1728,6 +1789,35 @@ class PrecipitationRadialCard extends HTMLElement {
       }
 
       /* --- Icon Keyframes --- */
+      /* CSS particle tier (animation: subtle) — keyframes for .animation-layer-css
+         particles; dropped in the v2.1 canvas refactor, restored for WebViews
+         that never composite the 2D canvas layer */
+      @keyframes anim-fall {
+        from { transform: translate(0, -20px); }
+        to { transform: translate(var(--drift, 0px), 400px); }
+      }
+      @keyframes anim-drift-fog {
+        0% { transform: translateX(0); }
+        50% { transform: translateX(35px); }
+        100% { transform: translateX(0); }
+      }
+      @keyframes anim-streak {
+        from { transform: translateX(-60px); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        to { transform: translateX(520px); opacity: 0; }
+      }
+      @keyframes anim-drift-cloud {
+        from { transform: translateX(0); }
+        to { transform: translateX(500px); }
+      }
+      @keyframes anim-flash {
+        0%, 89%, 100% { background: rgba(255,255,255,0); }
+        90% { background: rgba(255,255,255,0.22); }
+        92% { background: rgba(255,255,255,0.04); }
+        94% { background: rgba(255,255,255,0.15); }
+        96% { background: rgba(255,255,255,0); }
+      }
       @keyframes wi-sun-pulse {
         0%, 100% { transform: scale(1); box-shadow: 0 0 6px 3px rgba(255,184,48,0.5), 0 0 14px 6px rgba(255,184,48,0.25); }
         50% { transform: scale(1.1); box-shadow: 0 0 10px 5px rgba(255,184,48,0.6), 0 0 20px 8px rgba(255,184,48,0.3); }
@@ -2047,13 +2137,29 @@ class PrecipitationRadialCard extends HTMLElement {
     const precipAnim = precip ? this._mapConditionForAnimation(precip) : null;
 
     this._createGradientLayer(cardContainer, precipAnim || skyAnim);
-    this._createStackedAnimation(cardContainer, {
-      sky: skyAnim,
-      precip: precipAnim,
-      windSpeed: windSpeedNum,
-      windFactor,
-      intensityFactor,
-    });
+    if (this._config && this._config.animation === 'subtle') {
+      // CSS/DOM particle tier: no canvas. Some Android WebViews (Fully Kiosk)
+      // never composite the 2D canvas layer inside this card, and CSS
+      // keyframe animations also can't be stranded by a stalled rAF queue.
+      if (skyAnim && skyAnim !== 'wind') {
+        this._createCSSAnimation(cardContainer, skyAnim, windSpeedNum, 0);
+      }
+      if (precipAnim) {
+        this._createCSSAnimation(cardContainer, precipAnim, windSpeedNum, intensityFactor);
+      }
+      const wfCss = skyAnim === 'wind' ? Math.max(windFactor, 0.5) : windFactor;
+      if (wfCss > 0) {
+        this._createWindSVGLayer(cardContainer, windSpeedNum, wfCss);
+      }
+    } else {
+      this._createStackedAnimation(cardContainer, {
+        sky: skyAnim,
+        precip: precipAnim,
+        windSpeed: windSpeedNum,
+        windFactor,
+        intensityFactor,
+      });
+    }
   }
 
   getCardSize() {
