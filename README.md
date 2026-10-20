@@ -26,8 +26,10 @@ The inner ring shows **minutely** precipitation intensity for the next 60 minute
 - **Wind visualization** — SVG snake-line wind animation that scales with wind speed (5–33+ mph)
 - **Theme-aware colors** — automatically adapts to your HA light/dark theme using CSS variables
 - **Locate-me button** — tap to recenter the forecast on your current device location (uses HA device trackers with browser geolocation fallback)
+- **Forecast drill-through** — tap the card to open a full forecast page (hero, next 24 hours, 7-day strip with per-day mini charts, wind popup, moon/sun) served by the integration itself — nothing to add to your dashboards
+- **API quota alerts** — a Repairs issue + notification warn you before your PirateWeather allowance runs out (and when it has), with suggested intervals; an *API Calls Remaining* sensor shows the live number
 - Auto-discovers entities — zero card configuration needed
-- Configurable polling intervals (minutely and hourly, independently)
+- Configurable polling intervals (minutely, hourly and weekly, independently)
 - Configurable location (latitude/longitude) — changeable anytime without reinstalling
 - Responsive design using CSS container queries
 - Color-coded intensity scale from green (light) to red (heavy)
@@ -54,7 +56,7 @@ The inner ring shows **minutely** precipitation intensity for the next 60 minute
    - Get a free API key at [pirate-weather.apiable.io](https://pirate-weather.apiable.io/)
    - Latitude/longitude use decimal degrees (e.g. `40.712`, `-74.006`)
    - 3 decimal places is sufficient — PirateWeather resolves to a 13 km grid
-4. The card and all 6 sensors are created automatically
+4. The card, the forecast page and all 8 sensors are created automatically
 
 ### Adding the Card to a Dashboard
 
@@ -83,6 +85,9 @@ Go to **Settings** > **Devices & Services** > **Precipitation Radial Card** > **
 - **Latitude / Longitude** — change your forecast location
 - **Minutely update interval** — how often to fetch minute-by-minute precipitation (default: 600 seconds)
 - **Hourly update interval** — how often to fetch the hourly forecast (default: 1800 seconds)
+- **Weekly update interval** — how often to fetch the 7-day hourly forecast behind the drill-through page's mini charts (default: 3600 seconds)
+
+The location is shared by everything: the card, its sensors and the forecast page all follow the same latitude/longitude, including changes made with the card's locate-me button.
 
 Changes take effect immediately (the integration reloads automatically).
 
@@ -93,7 +98,7 @@ The card auto-discovers its sensors, so the minimal config is just `type: custom
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
 | `animation` | `vivid` / `subtle` | `vivid` | `vivid` draws weather particles on a canvas. `subtle` uses pure CSS/DOM animations instead — recommended for Android WebView browsers (e.g. Fully Kiosk wall tablets), where the canvas layer may never be composited (backgrounds look frozen or invisible). CSS animations also keep running when a WebView strands `requestAnimationFrame` after a screensaver. |
-| `tap_action` | `{action: navigate \| url, ...}` | — | Navigate to a dashboard path or open a URL when the card is tapped. |
+| `tap_action` | `{action: navigate \| url \| none, ...}` | opens the forecast page | Override what a tap does: navigate to a dashboard path, open a URL, or `none` to disable tapping. Leave it out to get the built-in forecast drill-through. |
 
 ```yaml
 type: custom:precipitation-radial-card
@@ -103,22 +108,48 @@ tap_action:
   navigation_path: /lovelace/weather
 ```
 
+## Forecast drill-through
+
+Tapping the card opens a full forecast page:
+
+![Forecast drill-through](docs/forecast-drillthrough.png)
+
+- Current conditions with feels-like, high/low, wind (tap the chip for an hourly wind popup), humidity, UV, moon phase, sunrise and sunset
+- **Next 24 hours** — temperature curve and chance of rain; tap for a tooltip
+- **This week** — 7 days with the temperature through each day and rain peaks; tap a day for details
+- Animated condition icons, light/dark theme aware
+
+The page is served by the integration at a hidden panel, `/precipitation-forecast`, so it works on every dashboard with zero setup. The card passes the dashboard you came from, and the page's **Back** button returns there (`history.back()` otherwise). On a phone held in portrait a **rotate** button turns the page sideways; it uses true landscape when the browser allows it and a CSS fallback when it does not (e.g. the Companion app).
+
+To link to the page from somewhere else, navigate to `/precipitation-forecast?back=/your-dashboard/view` (use `back=none` to hide the Back button where the host already has one).
+
+## API quota alerts
+
+Every PirateWeather response reports how many calls your key has left this month. The integration tracks that and projects your usage from the configured intervals:
+
+- **Projected to run out before the reset** → a Repairs warning and a persistent notification, with suggested larger intervals that would fit, or the option to upgrade your PirateWeather plan.
+- **Limit reached (HTTP 429)** → a Repairs error and a notification; data stays stale until the reset.
+- Both clear automatically once usage is back within the allowance or requests succeed again.
+- The **API Calls Remaining** diagnostic sensor exposes the live number, with the limit, reset time, calls/day and projection as attributes — handy for a dashboard tile or your own phone alert.
+
 ## API Usage & Recommended Intervals
 
-The integration makes **2 API calls per update cycle** — one for minutely data, one for hourly data. Each Home Assistant restart also triggers a fetch for both.
+The integration makes **3 API calls per update cycle** — minutely, hourly, and the 7-day hourly forecast for the drill-through page (24/day at the default weekly interval). Each Home Assistant restart also triggers a fetch for all three.
 
 [PirateWeather](https://pirate-weather.apiable.io/) tiers:
 - **Free:** 10,000 calls/month
 - **$2/mo donor:** 20,000 calls/month
 
-| Minutely | Hourly | Calls/Month | Free (10k) | $2/mo (20k) |
-|----------|--------|-------------|------------|--------------|
-| 900s | 3600s | ~3,600 | Very safe | Very safe |
-| **600s** | **1800s** | **~5,760** | **Comfortable (default)** | **Very safe** |
-| 300s | 1200s | ~10,800 | Tight | Comfortable |
-| 180s | 900s | ~17,280 | Exceeds | Comfortable |
+| Minutely | Hourly | Weekly | Calls/Month | Free (10k) | $2/mo (20k) |
+|----------|--------|--------|-------------|------------|--------------|
+| 900s | 3600s | 3600s | ~4,320 | Very safe | Very safe |
+| **600s** | **1800s** | **3600s** | **~6,480** | **Comfortable (default)** | **Very safe** |
+| 300s | 1200s | 3600s | ~11,520 | Exceeds | Comfortable |
+| 180s | 900s | 3600s | ~18,000 | Exceeds | Comfortable |
 
-**Formula:** `calls/month = ((86400 / minutely_seconds) + (86400 / hourly_seconds)) x 30`
+**Formula:** `calls/month = ((86400 / minutely_seconds) + (86400 / hourly_seconds) + (86400 / weekly_seconds)) x 30`
+
+The integration warns you (see *API quota alerts*) if the configured intervals will not fit in what is left of your allowance.
 
 ## How the Card Works
 
@@ -171,16 +202,18 @@ Both `precipIntensity` (in/hr) and `precipProbability` (0–1) must exceed minim
 
 ## Sensors Created
 
-The integration creates a **Precipitation Radial** device with 6 sensors:
+The integration creates a **Precipitation Radial** device with 8 sensors:
 
 | Sensor | Description | Unit |
 |--------|-------------|------|
 | Minutely Forecast | Minute-by-minute precipitation data (next 61 minutes) | — (data in attributes) |
 | Hourly Forecast | Hourly forecast data (next 24 hours) | — (data in attributes) |
+| Daily Forecast | 8-day daily forecast (high/low, precipitation, humidity, UV, moon, sunrise/sunset) plus the location it was fetched for | — (data in attributes) |
 | Current Apparent Temperature | Feels-like temperature | °C (auto-converts to your HA unit system) |
 | Today High Temperature | Today's high from hourly forecast | °C (auto-converts) |
 | Today Low Temperature | Today's low from hourly forecast | °C (auto-converts) |
 | Current Wind Speed | Current wind speed | m/s (auto-converts) |
+| API Calls Remaining | PirateWeather calls left this month (diagnostic), with limit, reset time and usage projection as attributes | calls |
 
 ## License
 

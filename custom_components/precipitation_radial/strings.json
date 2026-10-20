@@ -31,15 +31,27 @@
           "latitude": "Latitude",
           "longitude": "Longitude",
           "minutely_interval": "Minutely update interval (seconds)",
-          "hourly_interval": "Hourly update interval (seconds)"
+          "hourly_interval": "Hourly update interval (seconds)",
+          "weekly_interval": "Weekly update interval (seconds)"
         },
         "data_description": {
           "latitude": "Decimal degrees, e.g. 40.712 (3 decimal places is sufficient).",
           "longitude": "Decimal degrees, e.g. -74.006 (negative for West).",
           "minutely_interval": "How often to fetch minutely precipitation data (default: 600s). Lower values use more API calls. Each restart also triggers a fetch.",
-          "hourly_interval": "How often to fetch hourly forecast data (default: 1800s). Lower values use more API calls. Each restart also triggers a fetch."
+          "hourly_interval": "How often to fetch hourly forecast data (default: 1800s). Lower values use more API calls. Each restart also triggers a fetch.",
+          "weekly_interval": "How often to fetch the 7-day hourly forecast used by the forecast drill-through page (default: 3600s)."
         }
       }
+    }
+  },
+  "issues": {
+    "api_quota_exceeded": {
+      "title": "Pirate Weather API limit reached",
+      "description": "Pirate Weather is rejecting requests (HTTP 429): the {limit} calls/month allowance of your API key is used up until {reset_date}. The card and forecast page will show stale data until then.\n\nRaise the update intervals under {options_path} (currently about {calls_per_day} calls/day), or upgrade your Pirate Weather subscription."
+    },
+    "api_quota_projected": {
+      "title": "Pirate Weather API limit will be reached",
+      "description": "At the current update intervals (about {calls_per_day} calls/day) this integration will make about {projected} more calls before your allowance resets on {reset_date}, but only {remaining} of {limit} remain.\n\nRaise the intervals under {options_path} (e.g. minutely ≥ {suggest_minutely}s, hourly ≥ {suggest_hourly}s, weekly ≥ {suggest_weekly}s), or upgrade your Pirate Weather subscription."
     }
   }
 }

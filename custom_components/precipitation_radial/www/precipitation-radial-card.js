@@ -41,9 +41,14 @@ class PrecipitationRadialCard extends HTMLElement {
     };
     // Full-card tap support (config: tap_action). Interactive elements inside
     // the card (locate button) call stopPropagation so they are unaffected.
+    // With no tap_action configured the card opens the integration's forecast
+    // drill-through panel; `tap_action: {action: none}` disables tapping.
     this.addEventListener('click', () => {
-      const ta = this._config && this._config.tap_action;
-      if (!ta || !ta.action || ta.action === 'none') return;
+      const ta = this._effectiveTapAction();
+      if (!ta) return;
+      if (ta.haptic) {
+        window.dispatchEvent(new CustomEvent('haptic', { detail: ta.haptic }));
+      }
       if (ta.action === 'navigate' && ta.navigation_path) {
         history.pushState(null, '', ta.navigation_path);
         window.dispatchEvent(new CustomEvent('location-changed'));
@@ -53,6 +58,22 @@ class PrecipitationRadialCard extends HTMLElement {
     });
   }
 
+  /** The tap action to run: the configured one, or (none configured) the
+   *  built-in forecast drill-through. Returns null when tapping is disabled. */
+  _effectiveTapAction() {
+    const ta = this._config && this._config.tap_action;
+    if (ta === undefined) {
+      return {
+        action: 'navigate',
+        navigation_path: '/precipitation-forecast?back=' +
+          encodeURIComponent(location.pathname),
+        haptic: 'light',
+      };
+    }
+    if (!ta || !ta.action || ta.action === 'none') return null;
+    return ta;
+  }
+
   static getStubConfig() {
     return {};
   }
@@ -60,8 +81,7 @@ class PrecipitationRadialCard extends HTMLElement {
   setConfig(config) {
     if (!config) config = {};
     this._config = config;
-    const ta = config.tap_action;
-    this.style.cursor = (ta && ta.action && ta.action !== 'none') ? 'pointer' : '';
+    this.style.cursor = this._effectiveTapAction() ? 'pointer' : '';
     this._resolved = false;
     // If all 6 entities are explicitly provided, mark as resolved immediately
     if (

@@ -16,8 +16,10 @@ from .const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_MINUTELY_INTERVAL,
+    CONF_WEEKLY_INTERVAL,
     DEFAULT_HOURLY_INTERVAL,
     DEFAULT_MINUTELY_INTERVAL,
+    DEFAULT_WEEKLY_INTERVAL,
     DOMAIN,
 )
 
@@ -131,6 +133,12 @@ class PrecipitationRadialOptionsFlow(OptionsFlow):
                             CONF_HOURLY_INTERVAL, DEFAULT_HOURLY_INTERVAL
                         ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=300, max=7200)),
+                    vol.Required(
+                        CONF_WEEKLY_INTERVAL,
+                        default=self._config_entry.options.get(
+                            CONF_WEEKLY_INTERVAL, DEFAULT_WEEKLY_INTERVAL
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=900, max=86400)),
                 }
             ),
         )

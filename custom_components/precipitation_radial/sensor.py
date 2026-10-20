@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfSpeed, UnitOfTemperature
+from homeassistant.const import EntityCategory, UnitOfSpeed, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
@@ -20,6 +20,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import HourlyCoordinator, MinutelyCoordinator
+from .quota import DATA_KEY
 
 
 async def async_setup_entry(
@@ -45,10 +46,12 @@ async def async_setup_entry(
         [
             MinutelyForecastSensor(minutely_coord, entry, device_info, location_name),
             HourlyForecastSensor(hourly_coord, entry, device_info),
+            DailyForecastSensor(hourly_coord, entry, device_info, location_name),
             CurrentApparentTemperatureSensor(hourly_coord, entry, device_info),
             TodayHighTemperatureSensor(hourly_coord, entry, device_info),
             TodayLowTemperatureSensor(hourly_coord, entry, device_info),
             CurrentWindSpeedSensor(hourly_coord, entry, device_info),
+            ApiCallsRemainingSensor(hourly_coord, entry, device_info),
         ]
     )
 
@@ -138,6 +141,50 @@ class HourlyForecastSensor(PrecipitationRadialSensor):
                 }
                 for item in data
             ]
+        }
+
+
+class DailyForecastSensor(PrecipitationRadialSensor):
+    """8-day daily forecast for the same location as the card (follows
+    update_location / locate-me). Trimmed to the fields the weather-overview
+    page uses; latitude/longitude attributes let other consumers follow too."""
+
+    def __init__(self, coordinator, entry, device_info, location_name: str = "") -> None:
+        super().__init__(coordinator, entry, device_info, "daily_forecast")
+        self._attr_name = "Daily Forecast"
+        self._attr_icon = "mdi:calendar-week"
+        self._location_name = location_name
+
+    @property
+    def native_value(self) -> str | None:
+        if self.coordinator.data:
+            return datetime.now(timezone.utc).isoformat()
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        base = {
+            "location_name": self._location_name,
+            "latitude": getattr(self.coordinator, "_latitude", None),
+            "longitude": getattr(self.coordinator, "_longitude", None),
+        }
+        if not self.coordinator.data:
+            return {**base, "data": []}
+        daily = self.coordinator.data.get("daily", {})
+        keys = (
+            "time", "icon", "summary", "temperatureHigh", "temperatureLow",
+            "temperatureHighTime", "temperatureLowTime", "precipProbability",
+            "precipIntensity", "precipType", "humidity", "uvIndex", "moonPhase",
+            "sunriseTime", "sunsetTime", "windSpeed", "cloudCover",
+        )
+        return {
+            **base,
+            "summary": daily.get("summary", ""),
+            "icon": daily.get("icon", ""),
+            "data": [
+                {k: item.get(k) for k in keys if item.get(k) is not None}
+                for item in daily.get("data", [])[:8]
+            ],
         }
 
 
@@ -237,3 +284,38 @@ class CurrentWindSpeedSensor(PrecipitationRadialSensor):
         currently = self.coordinator.data.get("currently", {})
         val = currently.get("windSpeed")
         return round(float(val)) if val is not None else None
+
+
+class ApiCallsRemainingSensor(PrecipitationRadialSensor):
+    """Pirate Weather API calls left this period (from the API's rate-limit
+    headers) with the usage projection behind the quota warnings."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "calls"
+
+    def __init__(self, coordinator, entry, device_info) -> None:
+        super().__init__(coordinator, entry, device_info, "api_calls_remaining")
+        self._attr_name = "API Calls Remaining"
+        self._attr_icon = "mdi:api"
+
+    @property
+    def native_value(self) -> int | None:
+        return self.hass.data.get(DATA_KEY, {}).get("remaining")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        st = self.hass.data.get(DATA_KEY, {})
+        reset = st.get("reset_at")
+        projected = st.get("projected_until_reset")
+        remaining = st.get("remaining")
+        return {
+            "limit": st.get("limit"),
+            "reset_at": reset.isoformat() if reset else None,
+            "days_until_reset": round((reset - datetime.now(timezone.utc)).total_seconds() / 86400, 1) if reset else None,
+            "calls_per_day": round(st["calls_per_day"]) if st.get("calls_per_day") else None,
+            "projected_calls_until_reset": round(projected) if projected is not None else None,
+            "projected_surplus": round(remaining - projected) if (projected is not None and remaining is not None) else None,
+            "limit_exceeded": st.get("exceeded", False),
+            "projected_to_exceed": st.get("projected_flagged", False),
+        }
