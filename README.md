@@ -13,6 +13,12 @@ A custom Home Assistant integration that displays a clock-style radial precipita
 
 The inner ring shows **minutely** precipitation intensity for the next 60 minutes. The outer ring shows **hourly** forecasts for the next 12 hours. The center displays current conditions, temperature, high/low, and wind speed.
 
+<p align="center">
+  <img src="docs/forecast-drillthrough.png" width="650" alt="Forecast drill-through page">
+  <br>
+  <em>Tap the card to open a full forecast page &mdash; served by the integration, zero dashboard setup.</em>
+</p>
+
 ## Features
 
 - Clock-style radial visualization of precipitation forecasts
@@ -110,9 +116,7 @@ tap_action:
 
 ## Forecast drill-through
 
-Tapping the card opens a full forecast page:
-
-![Forecast drill-through](docs/forecast-drillthrough.png)
+Tapping the card opens a full forecast page (pictured above):
 
 - Current conditions with feels-like, high/low, wind (tap the chip for an hourly wind popup), humidity, UV, moon phase, sunrise and sunset
 - **Next 24 hours** — temperature curve and chance of rain; tap for a tooltip
