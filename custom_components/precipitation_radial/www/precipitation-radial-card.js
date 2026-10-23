@@ -1452,6 +1452,22 @@ class PrecipitationRadialCard extends HTMLElement {
     }
   }
 
+  /**
+   * Swap in a freshly built <ha-card> without touching anything else in the
+   * shadow root. Tools like card-mod inject their own element (holding the
+   * user's `card_mod` styles) next to our <ha-card>; wiping the whole shadow
+   * root on every forecast refresh deleted it, so any card_mod styling
+   * silently vanished within minutes of page load. Only our own <ha-card>
+   * nodes are replaced; foreign nodes stay connected.
+   */
+  _replaceCard(haCard) {
+    const root = this.shadowRoot;
+    for (const node of Array.from(root.children)) {
+      if (node.localName === 'ha-card') node.remove();
+    }
+    root.insertBefore(haCard, root.firstChild);
+  }
+
   _updateCard(hass) {
     this._stopAnimation();
     const config = this._config;
@@ -1461,15 +1477,15 @@ class PrecipitationRadialCard extends HTMLElement {
 
     // If entities aren't resolved yet, show waiting message
     if (!this._resolved) {
-      shadowRoot.innerHTML = `
-        <ha-card>
-          <div style="padding: 16px; text-align: center; color: var(--secondary-text-color);">
-            <ha-icon icon="mdi:weather-cloudy-clock" style="margin-bottom: 8px;"></ha-icon>
-            <div>Waiting for Precipitation Radial entities...</div>
-            <div style="font-size: 0.85em; margin-top: 4px;">Add the Precipitation Radial integration first.</div>
-          </div>
-        </ha-card>
+      const waitCard = document.createElement('ha-card');
+      waitCard.innerHTML = `
+        <div style="padding: 16px; text-align: center; color: var(--secondary-text-color);">
+          <ha-icon icon="mdi:weather-cloudy-clock" style="margin-bottom: 8px;"></ha-icon>
+          <div>Waiting for Precipitation Radial entities...</div>
+          <div style="font-size: 0.85em; margin-top: 4px;">Add the Precipitation Radial integration first.</div>
+        </div>
       `;
+      this._replaceCard(waitCard);
       return;
     }
 
@@ -1538,8 +1554,6 @@ class PrecipitationRadialCard extends HTMLElement {
       'wi-windy': '<svg class="wi-wind-svg" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg"><path class="wi-wind-track wi-wt1" d="M -12 20 L 25 20 C 30 20, 30 10, 27 10 C 25 10, 25 20, 30 20 L 112 20"/><path class="wi-wind-track wi-wt2" d="M -12 42 L 44 42 C 49 42, 49 52, 46 52 C 44 52, 44 42, 49 42 L 112 42"/><path class="wi-wind-track wi-wt3" d="M -12 64 L 19 64 C 24 64, 24 54, 21 54 C 19 54, 19 64, 24 64 L 112 64"/></svg>',
     };
     const iconInner = compoundIcons[weatherIconClass] || '';
-
-    shadowRoot.innerHTML = '';
 
     const haCard = document.createElement('ha-card');
 
@@ -2124,7 +2138,7 @@ class PrecipitationRadialCard extends HTMLElement {
     wrapper.appendChild(textContainer);
     cardContainer.appendChild(wrapper);
     haCard.appendChild(cardContainer);
-    shadowRoot.appendChild(haCard);
+    this._replaceCard(haCard);
 
     // Dark/light mode detection
     this._darkMode = this._hass?.themes?.darkMode ??
